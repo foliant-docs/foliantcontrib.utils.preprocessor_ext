@@ -10,7 +10,7 @@ from foliant.utils import output
 OptionValue = int or float or bool or str
 
 
-def allow_fail(msg='Failed to process tag.'):
+def allow_fail(msg='Failed to process tag. Skipping.'):
     """
     decorator for tag processing function
     If function failes for some reason, warning is issued but preprocessor
@@ -21,10 +21,9 @@ def allow_fail(msg='Failed to process tag.'):
             try:
                 return func(self, match)
             except Exception as e:
-                error = traceback.format_exc()
                 self._warning(f'{msg} {e}',
                               context=self.get_tag_context(match),
-                              error=error)
+                              error=e)
                 return match.group(0)
         return wrapper
     return decorator
@@ -39,7 +38,9 @@ class BasePreprocessorExt(BasePreprocessor):
 
     @staticmethod
     def get_options(options_string: str) -> Dict[str, OptionValue]:
-        '''Get a dictionary of typed options from a string with XML attributes.
+        '''
+        *** BasePreprocessor static method overriden ***
+        Get a dictionary of typed options from a string with XML attributes.
 
         :param options_string: String of XML attributes
 
@@ -86,9 +87,14 @@ class BasePreprocessorExt(BasePreprocessor):
             result += '...'
         return result
 
-    def _warning(self, msg: str, context='', error=''):
+    def _warning(self,
+                 msg: str,
+                 context='',
+                 error: Exception = None):
         '''
         Log warning and print to user.
+
+        If debug mode — print also context (if sepcified) and error (if specified).
 
         msg — message which should be logged;
         context (optional) — tag context got with get_tag_context function. If
@@ -98,21 +104,29 @@ class BasePreprocessorExt(BasePreprocessor):
         output_message = ''
         if self.current_filename:
             output_message += f'[{self.current_filename}] '
-        output_message += msg
+        output_message += msg + '\n'
         if context:
-            log_message = output_message + f'\nContext:\n---\n{context}\n---'
+            log_message = output_message + f'Context:\n---\n{context}\n---\n'
         if error:
-            log_message = log_message + f'\nException:\n---\n{error}\n---'
+            tb_str = traceback.format_exception(etype=type(error),
+                                                value=error,
+                                                tb=error.__traceback__)
+            log_message = log_message + '\n'.join(tb_str)
         if self.debug:
             output_message = log_message
         output(f'WARNING: {output_message}', self.quiet)
         self.logger.warning(log_message)
 
-    def _process_tags_for_all_files(self, func, log_msg: str):
+    def _process_tags_for_all_files(self,
+                                    func,
+                                    log_msg: str = 'Applying preprocessor'):
         '''Apply function func to all Markdown-files in the working dir'''
         self.logger.info(log_msg)
         for markdown_file_path in self.working_dir.rglob('*.md'):
-            self.current_filename = Path(markdown_file_path).relative_to(self.working_dir)
+            self.current_filepath = Path(markdown_file_path)
+            self.current_filename = str(self.current_filepath.
+                                        relative_to(self.working_dir))
+
             with open(markdown_file_path,
                       encoding='utf8') as markdown_file:
                 content = markdown_file.read()
