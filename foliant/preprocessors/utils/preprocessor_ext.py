@@ -56,7 +56,7 @@ class BasePreprocessorExt(BasePreprocessor):
         )
 
         return {
-            option.group('key'): yaml.load(option.group('value'))
+            option.group('key'): yaml.load(option.group('value'), yaml.Loader)
             for option in option_pattern.finditer(options_string)
         }
 
