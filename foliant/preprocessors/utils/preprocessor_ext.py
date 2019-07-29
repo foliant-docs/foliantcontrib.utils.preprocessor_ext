@@ -1,8 +1,5 @@
-import yaml
-import re
 import traceback
 
-from typing import Dict
 from pathlib import Path
 from foliant.preprocessors.base import BasePreprocessor
 from foliant.utils import output
@@ -35,30 +32,6 @@ class BasePreprocessorExt(BasePreprocessor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.current_filename = ''
-
-    @staticmethod
-    def get_options(options_string: str) -> Dict[str, OptionValue]:
-        '''
-        *** BasePreprocessor static method overriden ***
-        Get a dictionary of typed options from a string with XML attributes.
-
-        :param options_string: String of XML attributes
-
-        :returns: Dictionary with options
-        '''
-
-        if not options_string:
-            return {}
-
-        option_pattern = re.compile(
-            r'(?P<key>[A-Za-z_:][0-9A-Za-z_:\-\.]*)=(\'|")(?P<value>.+?)\2',
-            flags=re.DOTALL
-        )
-
-        return {
-            option.group('key'): yaml.load(option.group('value'), yaml.Loader)
-            for option in option_pattern.finditer(options_string)
-        }
 
     @staticmethod
     def get_tag_context(match, limit=100, full_tag=False):
@@ -105,13 +78,14 @@ class BasePreprocessorExt(BasePreprocessor):
         if self.current_filename:
             output_message += f'[{self.current_filename}] '
         output_message += msg + '\n'
+        log_message = output_message
         if context:
-            log_message = output_message + f'Context:\n---\n{context}\n---\n'
+            log_message += f'Context:\n---\n{context}\n---\n'
         if error:
             tb_str = traceback.format_exception(etype=type(error),
                                                 value=error,
                                                 tb=error.__traceback__)
-            log_message = log_message + '\n'.join(tb_str)
+            log_message += '\n'.join(tb_str)
         if self.debug:
             output_message = log_message
         output(f'WARNING: {output_message}', self.quiet)

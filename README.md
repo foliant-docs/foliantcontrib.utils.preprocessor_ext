@@ -1,6 +1,8 @@
+![](https://img.shields.io/pypi/v/foliantcontrib.utils.preprocessor_ext.svg)
+
 # Overview
 
-Extension to basic preprocessor class with useful methods and functions.
+Extension for basic Preprocessor class with useful methods and functions.
 
 # Usage
 
