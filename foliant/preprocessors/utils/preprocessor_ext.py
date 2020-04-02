@@ -1,8 +1,13 @@
 import traceback
+import re
 
 from pathlib import Path
+
+# from yaml import add_constructor
+
 from foliant.preprocessors.base import BasePreprocessor
 from foliant.utils import output
+# from foliant.meta.generate import load_meta, get_meta_for_chapter
 
 OptionValue = int or float or bool or str
 
@@ -14,14 +19,18 @@ def allow_fail(msg='Failed to process tag. Skipping.'):
     doesn't terminate. In this case the tag remains unchanged.
     """
     def decorator(func):
-        def wrapper(self, match):
+        def wrapper(self, param):
             try:
-                return func(self, match)
+                return func(self, param)
             except Exception as e:
-                self._warning(f'{msg} {e}',
-                              context=self.get_tag_context(match),
-                              error=e)
-                return match.group(0)
+                if isinstance(param, re.Match):
+                    self._warning(f'{msg} {e}',
+                                  context=self.get_tag_context(param),
+                                  error=e)
+                    return param.group(0)
+                else:
+                    self._warning(f'{msg} {e}', error=e)
+                    return None
         return wrapper
     return decorator
 
@@ -31,7 +40,12 @@ class BasePreprocessorExt(BasePreprocessor):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         self.current_filename = ''
+        self.current_pos = 0
+        self.current_func = None
+        # self.meta = load_meta(self.config['chapters'], self.working_dir)
+        # add_constructor('!meta', self._resolve_meta_tag)
 
     @staticmethod
     def get_tag_context(match, limit=100, full_tag=False):
@@ -59,6 +73,12 @@ class BasePreprocessorExt(BasePreprocessor):
         if end != len(source):  # add ... at the end if cropped
             result += '...'
         return result
+
+    # def _resolve_meta_tag(self, _, node) -> str:
+
+    #     chapter = get_meta_for_chapter(self.current_filepath)
+    #     section = chapter.get_section_by_offset(self.current_pos)
+    #     return section.data.get(node.value, '')
 
     def _warning(self,
                  msg: str,
@@ -91,6 +111,10 @@ class BasePreprocessorExt(BasePreprocessor):
         output(f'WARNING: {output_message}', self.quiet)
         self.logger.warning(log_message)
 
+    def pos_injector(self, block):
+        self.current_pos = block.start()
+        return self.current_func(block)
+
     def _process_tags_for_all_files(self,
                                     func,
                                     log_msg: str = 'Applying preprocessor'):
@@ -105,9 +129,33 @@ class BasePreprocessorExt(BasePreprocessor):
                       encoding='utf8') as markdown_file:
                 content = markdown_file.read()
 
-            processed_content = self.pattern.sub(func, content)
+            self.current_func = func
+            self.current_pos = 0
+            processed_content = self.pattern.sub(self.pos_injector, content)
 
-            if processed_content:
+            if isinstance(processed_content, str):
+                with open(markdown_file_path,
+                          'w',
+                          encoding='utf8') as markdown_file:
+                    markdown_file.write(processed_content)
+        self.current_filename = ''
+
+    def _process_all_files(self,
+                           func,
+                           log_msg: str = 'Applying preprocessor'):
+        '''Apply function func to all Markdown-files in the working dir'''
+        self.logger.info(log_msg)
+        for markdown_file_path in self.working_dir.rglob('*.md'):
+            self.current_filepath = Path(markdown_file_path)
+            self.current_filename = str(self.current_filepath.
+                                        relative_to(self.working_dir))
+
+            with open(markdown_file_path,
+                      encoding='utf8') as markdown_file:
+                content = markdown_file.read()
+
+            processed_content = func(content)
+            if isinstance(processed_content, str):
                 with open(markdown_file_path,
                           'w',
                           encoding='utf8') as markdown_file:

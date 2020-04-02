@@ -1,4 +1,4 @@
-![](https://img.shields.io/pypi/v/foliantcontrib.utils.preprocessor_ext.svg)
+[![](https://img.shields.io/pypi/v/foliantcontrib.utils.preprocessor_ext.svg)](https://pypi.org/project/foliantcontrib.utils.preprocessor_ext/) [![](https://img.shields.io/github/v/tag/foliant-docs/foliantcontrib.utils.preprocessor_ext.svg?label=GitHub)](https://github.com/foliant-docs/foliantcontrib.utils.preprocessor_ext)
 
 # Overview
 
@@ -70,7 +70,7 @@ class Preprocessor(BasePreprocessorExt):
 
 As a bonus when using this workflow we get additional capabilities of logging and outputting warnings.
 
-## Issuing warnings
+### Issuing warnings
 
 When using `_process_tags_for_all_files` method to process tags we can also take advantage of `_warning` method.
 
@@ -115,7 +115,7 @@ Result: slug.pre
 
 As we see, we've only supplied the message, but the preprocessor also added the `WARNING:` prefix and current file name to console. If we'd run the make command in debug mode (with `-d --debug` flag), we would also see full traceback of the error. In any case, traceback is stored in log.
 
-## Getting tag context
+### Getting tag context
 
 Sometimes we want to show the context of the tag, where we met some problems. By context I mean some words before the tag, some contents of the tag body and some words after the tag. It's really useful for debugging large md-files, with context you usually can identify the place in the document which causes errors.
 
@@ -160,7 +160,7 @@ Now user can easily understand where's the problem in his document.
 `limit` (default: `100`) — number of characters included in context from before the tag, after the tag, and of the tag body;
 `full_tag` (default: `False`) — if this is True, the tag body is copied into context without cropping (useful for relatively small expected tag bodies).
 
-## Sending context to warning
+### Sending context to warning
 
 One last thing to use the full power of `BasePreprocessorExt` warnings:
 
@@ -183,7 +183,7 @@ class Preprocessor(BasePreprocessorExt):
 
 Now if we catch this exception in normal mode, we will only get the md-filename and the message in the console. But if we run it in debug mode, we will get a full python traceback and the context of the tag. And a happy user.
 
-## allow_fail decorator
+### allow_fail decorator
 
 Often we don't want the whole preprocessor to crash if there are some problems in just one tag of the document. We can easily achieve this using the `allow_fail` decorator, which is included in the `preprocessor_ext` module. Decorate your function, which is then sent to `_process_tags_for_all_files` method:
 
@@ -207,3 +207,48 @@ class Preprocessor(BasePreprocessorExt):
 Now in case _any_ error occurs in the `_process_tag` function, preprocessor will issue warning, show it to user, save it into log and skip the tag.
 
 The `allow_fail` decorator accepts one argument, the error message, which will be shown to user in case of exception. It defaults to: _Failed to process tag. Skipping._
+
+## Simplified file processing workflow
+
+If your preprocessor doesn't have tags, you're probably doing somehing like this:
+
+```python
+class Preprocessor(BasePreprocessor):
+  ...
+  def _process_file(content):
+    processed = content
+    # do something with the content
+    return processed
+
+  def apply(self):
+    self.logger.info('Applying preprocessor')
+    for markdown_file_path in self.working_dir.rglob('*.md'):
+        with open(markdown_file_path, encoding='utf8') as markdown_file:
+            content = markdown_file.read()
+
+        processed_content = self._process_tags(content)
+
+        if processed_content:
+            with open(markdown_file_path, 'w') as markdown_file:
+                markdown_file.write(processed_content)
+        self.logger.info('Preprocessor applied')
+```
+
+BasePreprocessorExt saves us from writing these many lines of the code which appear unchanged in most preprocessors.
+
+So now instead of all that code we will write:
+
+```python
+class Preprocessor(BasePreprocessorExt):
+  ...
+  def _process_file(match):
+    processed = content
+    # do something with the content
+    return processed
+
+  def apply(self):
+    self._process_all_files(func=self._process_tag)
+        self.logger.info('Preprocessor applied')
+```
+
+As a bonus we have `self.current_filepath` set to the path of currently processing file and `self.current_filename` — to the chapter name, as it is would be stated in `chapters` foliant.yml section.
