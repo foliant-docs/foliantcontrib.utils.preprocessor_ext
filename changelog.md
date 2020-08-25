@@ -1,3 +1,7 @@
+# 1.0.4
+
+-   Add `buffer` param to both `_process...` functions which allows to buffer results and save all changed files at once after processing.
+
 # 1.0.3
 
 -   Add `_process_all_files` method for preprocessors without tags.

@@ -44,6 +44,7 @@ class BasePreprocessorExt(BasePreprocessor):
         self.current_filename = ''
         self.current_pos = 0
         self.current_func = None
+        self.buffer = {}
         # self.meta = load_meta(self.config['chapters'], self.working_dir)
         # add_constructor('!meta', self._resolve_meta_tag)
 
@@ -115,10 +116,23 @@ class BasePreprocessorExt(BasePreprocessor):
         self.current_pos = block.start()
         return self.current_func(block)
 
+    def save_file(self, path, content):
+        with open(path, 'w', encoding='utf8') as f:
+            f.write(content)
+
     def _process_tags_for_all_files(self,
                                     func,
-                                    log_msg: str = 'Applying preprocessor'):
-        '''Apply function func to all Markdown-files in the working dir'''
+                                    log_msg: str = 'Applying preprocessor',
+                                    buffer: bool = False):
+        '''
+        Apply function func to all Markdown-files in the working dir
+
+        :param func: function that should be applied to each found tag. Function
+                     must accept 1 parameter: regex match object (found tag)
+        :param log_msg: message text which will be logged at the beginning
+        :param buffer: if True, processed text of each file will be buffered and
+                       at the end all files will be saved at once.
+        '''
         self.logger.info(log_msg)
         for markdown_file_path in self.working_dir.rglob('*.md'):
             self.current_filepath = Path(markdown_file_path)
@@ -134,15 +148,20 @@ class BasePreprocessorExt(BasePreprocessor):
             processed_content = self.pattern.sub(self.pos_injector, content)
 
             if isinstance(processed_content, str):
-                with open(markdown_file_path,
-                          'w',
-                          encoding='utf8') as markdown_file:
-                    markdown_file.write(processed_content)
+                if buffer:
+                    self.buffer[markdown_file_path] = processed_content
+                else:
+                    self.save_file(markdown_file_path, processed_content)
         self.current_filename = ''
+
+        for path, content in self.buffer.items():
+            self.save_file(path, content)
+        self.buffer = {}
 
     def _process_all_files(self,
                            func,
-                           log_msg: str = 'Applying preprocessor'):
+                           log_msg: str = 'Applying preprocessor',
+                           buffer: bool = False):
         '''Apply function func to all Markdown-files in the working dir'''
         self.logger.info(log_msg)
         for markdown_file_path in self.working_dir.rglob('*.md'):
@@ -156,8 +175,12 @@ class BasePreprocessorExt(BasePreprocessor):
 
             processed_content = func(content)
             if isinstance(processed_content, str):
-                with open(markdown_file_path,
-                          'w',
-                          encoding='utf8') as markdown_file:
-                    markdown_file.write(processed_content)
+                if buffer:
+                    self.buffer[markdown_file_path] = processed_content
+                else:
+                    self.save_file(markdown_file_path, processed_content)
         self.current_filename = ''
+
+        for path, content in self.buffer.items():
+            self.save_file(path, content)
+        self.buffer = {}

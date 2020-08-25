@@ -64,9 +64,11 @@ class Preprocessor(BasePreprocessorExt):
     return processed_string
 
   def apply(self):
-    self._process_tags_for_all_files(func=self._process_tag)
+    self._process_tags_for_all_files(func=self._process_tag, buffer=False)
         self.logger.info('Preprocessor applied')
 ```
+
+Note the `buffer=False` parameter (which in this case is excessive because it is `False` by default). If `buffer=True`, markdown files processing will be buffered, e.g. they won't be updated until all of them are processed.
 
 As a bonus when using this workflow we get additional capabilities of logging and outputting warnings.
 
@@ -247,8 +249,10 @@ class Preprocessor(BasePreprocessorExt):
     return processed
 
   def apply(self):
-    self._process_all_files(func=self._process_tag)
+    self._process_all_files(func=self._process_tag, buffer=False)
         self.logger.info('Preprocessor applied')
 ```
+
+Note the `buffer=False` parameter (which in this case is excessive because it is `False` by default). If `buffer=True`, markdown files processing will be buffered, e.g. they won't be updated until all of them are processed.
 
 As a bonus we have `self.current_filepath` set to the path of currently processing file and `self.current_filename` — to the chapter name, as it is would be stated in `chapters` foliant.yml section.
