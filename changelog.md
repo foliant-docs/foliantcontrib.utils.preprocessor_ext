@@ -1,3 +1,7 @@
+# 1.0.5
+
+-   Fix: allow_fail decorator now works for any function with any set of parameters.
+
 # 1.0.4
 
 -   Add `buffer` param to both `_process...` functions which allows to buffer results and save all changed files at once after processing.

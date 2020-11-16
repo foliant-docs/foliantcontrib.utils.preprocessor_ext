@@ -1,7 +1,7 @@
 import traceback
 import re
 
-from pathlib import Path
+from pathlib import Path, PosixPath
 
 # from yaml import add_constructor
 
@@ -14,20 +14,21 @@ OptionValue = int or float or bool or str
 
 def allow_fail(msg='Failed to process tag. Skipping.'):
     """
-    decorator for tag processing function
-    If function failes for some reason, warning is issued but preprocessor
+    If function func fails for some reason, warning is issued but preprocessor
     doesn't terminate. In this case the tag remains unchanged.
+    Decorator issues a warning to user with BasePreprocessorExt _warning method.
+    If first positional argument is a match object, it is passed as context.
     """
     def decorator(func):
-        def wrapper(self, param):
+        def wrapper(self, *args, **kwargs):
             try:
-                return func(self, param)
+                return func(self, *args, **kwargs)
             except Exception as e:
-                if isinstance(param, re.Match):
+                if isinstance(args[0], re.Match):
                     self._warning(f'{msg} {e}',
-                                  context=self.get_tag_context(param),
+                                  context=self.get_tag_context(args[0]),
                                   error=e)
-                    return param.group(0)
+                    return args[0].group(0)
                 else:
                     self._warning(f'{msg} {e}', error=e)
                     return None
