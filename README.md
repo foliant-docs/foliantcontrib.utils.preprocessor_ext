@@ -1,5 +1,7 @@
 [![](https://img.shields.io/pypi/v/foliantcontrib.utils.preprocessor_ext.svg)](https://pypi.org/project/foliantcontrib.utils.preprocessor_ext/) [![](https://img.shields.io/github/v/tag/foliant-docs/foliantcontrib.utils.preprocessor_ext.svg?label=GitHub)](https://github.com/foliant-docs/foliantcontrib.utils.preprocessor_ext)
 
+**This package is deprecated and will be removed in future. Preprocessor extensions moved to the [main utils package](https://github.com/foliant-docs/foliantcontrib.utils).**
+
 # Overview
 
 Extension for basic Preprocessor class with useful methods and functions.
